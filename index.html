@@ -1,0 +1,493 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hunter Papan Master Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a2e; color: #ffffff;
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; padding: 20px; user-select: none;
+        }
+        h1 { margin-bottom: 5px; color: #f1c40f; font-size: 24px; text-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+        p { margin-top: 5px; margin-bottom: 15px; color: #a0aec0; font-size: 14px; text-align: center; }
+        .control-panel {
+            background-color: #16213e; padding: 15px 25px; border-radius: 8px;
+            margin-bottom: 15px; display: flex; align-items: center; justify-content: center;
+            gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); flex-wrap: wrap;
+        }
+        select, input, button { padding: 8px 12px; font-size: 14px; font-weight: bold; border-radius: 5px; border: none; }
+        select, input { background-color: #0f3460; color: white; border: 1px solid #4a5568; width: 110px; }
+        button { background-color: #2ecc71; color: white; cursor: pointer; transition: background 0.2s; }
+        button:hover { background-color: #27ae60; }
+
+        .main-layout { display: flex; gap: 20px; align-items: flex-start; justify-content: center; width: 100%; }
+        .side-panel { width: 220px; background: #16213e; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .panel-title { font-size: 14px; font-weight: bold; color: #e94560; margin-bottom: 10px; border-bottom: 1px solid #4a5568; padding-bottom: 5px; text-align: center; }
+        .scoreboard-container { display: flex; flex-direction: column; gap: 10px; transition: all 0.4s ease; }
+        .player-card { padding: 10px; border-radius: 5px; font-size: 13px; border: 2px solid transparent; position: relative; transition: all 0.3s ease; }
+        .player-card.active { border-color: #fff; box-shadow: 0 0 10px #fff; }
+        
+        /* DESAIN FITUR LOG NILAI BARU */
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; }
+        .log-toggle-btn { background: rgba(0,0,0,0.3); color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold; }
+        .log-toggle-btn:hover { background: rgba(0,0,0,0.5); }
+        .player-history-box { background: rgba(0,0,0,0.4); border-radius: 4px; padding: 6px; margin-top: 6px; font-size: 11px; max-height: 80px; overflow-y: auto; display: none; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.1); }
+        .player-history-box.show { display: block; }
+        
+        .score-change-pop {
+            position: absolute; right: 45px; top: 8px; background-color: #ff4d4d; color: white;
+            font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); animation: popFade 3s forwards; z-index: 20;
+        }
+        @keyframes popFade {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-10px) scale(0.9); opacity: 0; }
+        }
+
+        .safe-zone {
+            background-color: #111827; border: 2px dashed #2ecc71; border-radius: 8px;
+            padding: 10px; min-height: 80px; display: flex; flex-wrap: wrap; gap: 8px;
+            justify-content: center; align-items: center; margin-top: 15px;
+        }
+        #map-container { background-color: #2d3748; padding: 10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+        #map { display: grid; gap: 2px; background-color: #1a202c; position: relative; }
+        
+        .cell { background-color: #4a5568; border-radius: 2px; position: relative; box-sizing: border-box; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; }
+        .cell.valid-target { cursor: pointer; }
+        .cell.valid-target:hover { background-color: #5a6578; border: 1px solid #fff; }
+        .cell.blocked { cursor: not-allowed; opacity: 1; }
+        
+        /* 6 Warna Blok Aktif Terungkap Termasuk Blok Finish Hijau Neon */
+        .cell.activated-poin { background-color: #c0c0c0 !important; border: 1px solid #fff; box-shadow: inset 0 0 5px #fff; }
+        .cell.activated-bom { background-color: #ff4d4d !important; border: 1px solid #fff; box-shadow: inset 0 0 5px #000; }
+        .cell.activated-monster { background-color: #9b59b6 !important; border: 1px solid #fff; box-shadow: inset 0 0 5px #000; }
+        .cell.activated-buff { background-color: #f1c40f !important; border: 1px solid #fff; box-shadow: inset 0 0 5px #fff; }
+        .cell.activated-normal { background-color: #1f293d !important; border: 1px solid #4a5568; box-shadow: inset 0 0 4px rgba(0,0,0,0.6); }
+        .cell.activated-finish { background-color: #2ecc71 !important; border: 1px solid #fff; box-shadow: 0 0 10px #2ecc71; }
+        
+        .icon-layer {
+            position: absolute; display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; left: 0; top: 0; z-index: 1; pointer-events: none; font-size: 14px;
+        }
+
+        .icon-layer {
+            position: absolute; display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; left: 0; top: 0; z-index: 1; pointer-events: none; font-size: 14px;
+        }
+        
+        .player-token {
+            width: 19px; height: 19px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 10px; color: white; box-sizing: border-box; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5); border: 1px solid #fff; 
+            z-index: 10; opacity: 0.95; position: absolute;
+        }
+        .player-token.following { pointer-events: none; opacity: 0.8; box-shadow: 0 0 12px #fff; z-index: 100; }
+        .player-token.invisible-sz { display: none !important; }
+        .range-overlay { position: absolute; border: 2px dashed #f1c40f; border-radius: 50%; pointer-events: none; display: none; z-index: 3; background-color: rgba(241, 196, 15, 0.05); transform: translate(-50%, -50%); }
+
+        .alert-panel { width: 240px; background: #16213e; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; }
+        #alertBox { background-color: #1a202c; padding: 15px; border-radius: 5px; min-height: 100px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; color: #a0aec0; border: 1px solid #2d3748; transition: all 0.2s; text-align: center; line-height: 1.5; }
+        
+        @keyframes text-blink-red { 0%, 100% { background-color: #1a202c; color: #ff4d4d; border-color: #ff4d4d; box-shadow: 0 0 10px #ff4d4d; } 50% { background-color: #4a1414; color: #fff; border-color: #fff; } }
+        @keyframes text-blink-purple { 0%, 100% { background-color: #1a202c; color: #f1c40f; border-color: #9b59b6; box-shadow: 0 0 10px #9b59b6; } 50% { background-color: #2d144a; color: #fff; border-color: #fff; } }
+        @keyframes text-blink-black-white { 0%, 100% { background-color: #000000; color: #ffffff; border-color: #ffffff; box-shadow: 0 0 15px #fff; } 50% { background-color: #ffffff; color: #000000; border-color: #000000; } }
+        
+        .alert-blink-red { animation: text-blink-red 0.5s infinite; }
+        .alert-blink-purple { animation: text-blink-purple 0.5s infinite; }
+        .alert-blink-black-white { animation: text-blink-black-white 0.4s infinite; }
+        .hidden { display: none !important; }
+        #prompt-text { color: #f1c40f; font-weight: bold; margin-bottom: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>💎 Hunter Papan Ultimate: Arena Perangkap Pro 🔮</h1>
+    <p>Monster memotong 50% total skor, Bom dikunci angka mati tetap (-15 poin). Gunakan intuisi radar!</p>
+    <div class="control-panel">
+        <label for="playerCount">Pemain:</label>
+        <select id="playerCount">
+            <option value="2" selected>2 Pemain</option><option value="3">3 Pemain</option>
+            <option value="4">4 Pemain</option><option value="5">5 Pemain</option>
+            <option value="6">6 Pemain</option><option value="7">7 Pemain Max</option>
+        </select>
+        <label for="mapSize">Luas Map:</label>
+        <select id="mapSize">
+            <option value="15" selected>Kecil (15x15)</option>
+            <option value="20">Standar (20x20)</option>
+            <option value="25">Besar (25x25)</option>
+        </select>
+        <label for="poinPercent">Poin Peta (%):</label>
+        <input type="number" id="poinPercent" value="50" min="10" max="85">
+        
+        <!-- FIX NEW: Menambahkan sakelar pilihan Blok Finish instan -->
+        <label for="useFinish">Blok Finish:</label>
+        <select id="useFinish">
+            <option value="tidak" selected>Tidak Ada</option>
+            <option value="ada">Ada (1 Blok)</option>
+        </select>
+        
+        <button id="btnStart" onclick="startGame()">Mulai Game Baru</button>
+    </div>
+    <div id="prompt-text">Sesuaikan pengaturan lalu klik Mulai Game Baru!</div>
+
+    <div id="gameScreen" class="main-layout hidden">
+        <div class="side-panel">
+            <div class="panel-title">📊 LEADERBOARD (AUTO-SORT)</div>
+            <div class="scoreboard-container" id="scoreboard"></div>
+            <p id="turnInfo" style="margin-top:15px; text-align:center; font-weight:bold; color:#f1c40f;"></p>
+            <div class="panel-title" style="margin-top:20px;">🛡️ SAFE ZONE</div>
+            <div id="safeZone" class="safe-zone"></div>
+        </div>
+        <div id="map-container"><div id="map"></div><div id="rangeCircle" class="range-overlay"></div></div>
+        <div class="alert-panel"><div class="panel-title">⚠️ RADAR PERINGATAN</div><div id="alertBox">Sistem Aman...</div></div>
+    </div>
+    <script>
+        let MAP_SIZE = 20; const CELL_SIZE = 25; const GAP = 2; let TOTAL_CELLS = 400;
+        let players = []; let currentPlayerIndex = 0; let mapData = []; let gameActive = true;
+        let isFollowing = false; let activeToken = null; let lastConfirmedPos = null;
+        let openLogs = {}; // Menyimpan status terbuka/tertutup dropdown log nilai pemain
+        
+        // Perluasan Menjadi 7 Skema Warna Unik Premium Khusus Untuk 7 Pemain Maksimal
+        const playerColors = ['#e94560', '#3498db', '#2ecc71', '#e67e22', '#9b59b6', '#f1c40f', '#1abc9c'];
+
+        function startGame() {
+            const count = parseInt(document.getElementById('playerCount').value) || 2;
+            MAP_SIZE = parseInt(document.getElementById('mapSize').value) || 20;
+            TOTAL_CELLS = MAP_SIZE * MAP_SIZE;
+            const mapEl = document.getElementById('map');
+            mapEl.style.gridTemplateColumns = `repeat(${MAP_SIZE}, ${CELL_SIZE}px)`;
+            mapEl.style.gridTemplateRows = `repeat(${MAP_SIZE}, ${CELL_SIZE}px)`;
+            document.getElementById('prompt-text').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            players = []; currentPlayerIndex = 0; mapData = []; gameActive = true; isFollowing = false; activeToken = null; openLogs = {};
+            document.getElementById('alertBox').className = ''; document.getElementById('alertBox').textContent = "Sistem Bersih. Klik bidak Anda.";
+            initMapStructure(); initPlayers(count); generateSistemPersenObjects(); renderMap(); updateUI(); setupClickToFollow();
+        }
+
+        function initMapStructure() {
+            for (let r = 0; r < MAP_SIZE; r++) {
+                mapData[r] = [];
+                for (let c = 0; c < MAP_SIZE; c++) { mapData[r][c] = { type: 'normal', activated: false, displayType: 'normal' }; }
+            }
+        }
+        function initPlayers(count) {
+            for (let i = 0; i < count; i++) {
+                players.push({ id: i + 1, name: `Pemain ${i + 1}`, r: -1, c: -1, score: 0, buffTurns: 0, color: playerColors[i % playerColors.length], alertText: "", history: [] });
+                openLogs[i + 1] = false;
+            }
+        }
+        function toggleLogBox(playerId) {
+            openLogs[playerId] = !openLogs[playerId];
+            updateUI();
+        }
+        function generateSistemPersenObjects() {
+            let pct = parseInt(document.getElementById('poinPercent').value) || 50;
+            if(pct < 10) pct = 10; if(pct > 85) pct = 85;
+            
+            // Cek sakelar dropdown apakah pemain mau memunculkan blok finish instan
+            const useFinish = document.getElementById('useFinish').value === "ada";
+
+            let totalPoin = Math.floor((pct / 100) * TOTAL_CELLS);
+            let totalBuff = Math.floor(TOTAL_CELLS * 0.08); 
+            let totalBom = Math.floor(TOTAL_CELLS * 0.06); 
+            let totalMonster = Math.floor(TOTAL_CELLS * 0.02);
+            
+            // Mengurangi 1 slot kotak jika opsi blok finish bernilai true
+            let slotFinish = useFinish ? 1 : 0;
+            let totalAman = TOTAL_CELLS - (totalPoin + totalBuff + totalBom + totalMonster + slotFinish);
+            
+            let poolObjects = [];
+            for (let i = 0; i < totalPoin; i++) poolObjects.push('poin');
+            for (let i = 0; i < totalBuff; i++) poolObjects.push('buff');
+            for (let i = 0; i < totalBom; i++) poolObjects.push('bom');
+            for (let i = 0; i < totalMonster; i++) poolObjects.push('monster');
+            for (let i = 0; i < totalAman; i++) poolObjects.push('normal');
+            if (useFinish) poolObjects.push('finish'); // Menyisipkan tepat 1 blok finish instan ke pool acak
+
+            for (let i = poolObjects.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1)); [poolObjects[i], poolObjects[j]] = [poolObjects[j], poolObjects[i]];
+            }
+            let index = 0;
+            for (let r = 0; r < MAP_SIZE; r++) { for (let c = 0; c < MAP_SIZE; c++) { mapData[r][c].type = poolObjects[index++]; } }
+        }
+
+        function renderMap() {
+            const mapElement = document.getElementById('map'); mapElement.innerHTML = '';
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    const cell = document.createElement('div'); cell.className = 'cell'; cell.dataset.r = r; cell.dataset.c = c;
+                    mapElement.appendChild(cell);
+                }
+            }
+        }
+        function setupClickToFollow() {
+            const mapEl = document.getElementById('map'); const rangeCircle = document.getElementById('rangeCircle');
+            document.addEventListener('click', (e) => {
+                if (!gameActive) return;
+                let p = players[currentPlayerIndex];
+                if (!isFollowing && e.target.classList.contains('player-token')) {
+                    if (e.target.dataset.playerId != p.id) return;
+                    isFollowing = true; activeToken = e.target; lastConfirmedPos = { r: p.r, c: p.c };
+                    if (lastConfirmedPos.r === -1) { activeToken.classList.add('invisible-sz'); } 
+                    else { activeToken.classList.add('following'); }
+                    if (lastConfirmedPos.r !== -1) {
+                        let circleSize = (7 * 2 + 1) * (CELL_SIZE + GAP);
+                        rangeCircle.style.width = circleSize + 'px'; rangeCircle.style.height = circleSize + 'px';
+                        rangeCircle.style.left = (lastConfirmedPos.c * (CELL_SIZE + GAP) + CELL_SIZE/2) + 'px';
+                        rangeCircle.style.top = (lastConfirmedPos.r * (CELL_SIZE + GAP) + CELL_SIZE/2) + 'px';
+                        rangeCircle.style.display = 'block';
+                    }
+                    highlightValidCells(lastConfirmedPos.r, lastConfirmedPos.c);
+                    e.stopPropagation(); return;
+                }
+                if (isFollowing && activeToken) {
+                    const rect = mapEl.getBoundingClientRect();
+                    let dropC = Math.floor((e.clientX - rect.left) / (CELL_SIZE + GAP));
+                    let dropR = Math.floor((e.clientY - rect.top) / (CELL_SIZE + GAP));
+                    let distance = lastConfirmedPos.r !== -1 ? Math.max(Math.abs(dropR - lastConfirmedPos.r), Math.abs(dropC - lastConfirmedPos.c)) : 0;
+                    let isFromSafeZone = (lastConfirmedPos.r === -1);
+                    let validStep = dropR >= 0 && dropR < MAP_SIZE && dropC >= 0 && dropC < MAP_SIZE;
+                    let notBlocked = validStep && !mapData[dropR][dropC].activated;
+                    let withinDistance = isFromSafeZone || (distance <= 7);
+                    if (validStep && notBlocked && withinDistance) {
+                        isFollowing = false; rangeCircle.style.display = 'none'; removeHighlights();
+                        p.r = dropR; p.c = dropC; eksekusiLangkahPemain(dropR, dropC, p); activeToken = null;
+                    } else {
+                        isFollowing = false; rangeCircle.style.display = 'none'; removeHighlights(); activeToken = null; updateUI();
+                    }
+                }
+            });
+            document.addEventListener('mousemove', (e) => { if (isFollowing && activeToken) moveTokenToCursor(e); });
+        }
+
+        function moveTokenToCursor(e) {
+            const mapEl = document.getElementById('map'); const rect = mapEl.getBoundingClientRect();
+            let currentC = Math.floor((e.clientX - rect.left) / (CELL_SIZE + GAP));
+            let currentR = Math.floor((e.clientY - rect.top) / (CELL_SIZE + GAP));
+            if (currentR >= 0 && currentR < MAP_SIZE && currentC >= 0 && currentC < MAP_SIZE) {
+                if (lastConfirmedPos && lastConfirmedPos.r !== -1) {
+                    let dist = Math.max(Math.abs(currentR - lastConfirmedPos.r), Math.abs(currentC - lastConfirmedPos.c));
+                    if (dist > 7) return; 
+                }
+                const cellEl = document.querySelector(`[data-r='${currentR}'][data-c='${currentC}']`);
+                if (cellEl && activeToken.parentElement !== cellEl) {
+                    activeToken.style.left = "2px"; activeToken.style.top = "2px"; cellEl.appendChild(activeToken);
+                }
+            }
+        }
+        function highlightValidCells(startR, startC) {
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    let cellEl = document.querySelector(`[data-r='${r}'][data-c='${c}']`); if (!cellEl) continue;
+                    if (startR === -1) { if (!mapData[r][c].activated) cellEl.classList.add('valid-target'); } 
+                    else { if (Math.max(Math.abs(r - startR), Math.abs(c - startC)) <= 7 && !mapData[r][c].activated) cellEl.classList.add('valid-target'); }
+                }
+            }
+        }
+        function removeHighlights() { document.querySelectorAll('.cell').forEach(c => c.classList.remove('valid-target')); }
+        
+        function updateUI() {
+            document.querySelectorAll('.player-token').forEach(el => el.remove());
+            const scoreboard = document.getElementById('scoreboard'); scoreboard.innerHTML = '';
+            const safeZone = document.getElementById('safeZone'); safeZone.innerHTML = '';
+            
+            // Mengurutkan posisi papan skor berdasarkan poin tertinggi
+            let sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+            
+            sortedPlayers.forEach((p) => {
+                const card = document.createElement('div'); 
+                let isCurrentTurn = (p.id === players[currentPlayerIndex].id);
+                card.className = `player-card ${isCurrentTurn ? 'active' : ''}`;
+                card.style.backgroundColor = p.color;
+                
+                let popHtml = p.alertText ? `<div class="score-change-pop">${p.alertText}</div>` : "";
+                
+                // FIX MUTLAK: Menggunakan metode .reverse() agar langkah nomor terbaru otomatis dicetak di paling atas log
+                let reversedHistory = [...p.history].reverse();
+                let historyLines = reversedHistory.map((h, i) => `${p.history.length - i}. ${h}`).join('<br>') || "Belum melangkah.";
+                let isShow = openLogs[p.id] ? "show" : "";
+                
+                card.innerHTML = `
+                    <div class="card-header-flex">
+                        <strong>${p.name}</strong>
+                        <button class="log-toggle-btn" onclick="toggleLogBox(${p.id})">📋 Log</button>
+                    </div>
+                    Skor: ${p.score} ${p.buffTurns > 0 ? '<br>✨ Buff: '+p.buffTurns+' turn' : ''} ${popHtml}
+                    <div class="player-history-box ${isShow}">${historyLines}</div>
+                `;
+                scoreboard.appendChild(card);
+            });
+            document.getElementById('turnInfo').textContent = `Giliran: ${players[currentPlayerIndex].name}`;
+            
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    const cellEl = document.querySelector(`[data-r='${r}'][data-c='${c}']`); if(!cellEl) continue;
+                    cellEl.innerHTML = ''; cellEl.className = 'cell'; let data = mapData[r][c];
+                    if (data.activated) {
+                        cellEl.classList.add(`activated-${data.displayType}`); cellEl.classList.add('blocked');
+                        const iconDiv = document.createElement('div'); iconDiv.className = 'icon-layer';
+                        if (data.displayType === 'poin') iconDiv.textContent = '🪙'; 
+                        if (data.displayType === 'bom') iconDiv.textContent = '💣';
+                        if (data.displayType === 'monster') iconDiv.textContent = '👾'; 
+                        if (data.displayType === 'buff') iconDiv.textContent = '👑';
+                        if (data.displayType === 'normal') iconDiv.textContent = '🛑';
+                        cellEl.appendChild(iconDiv);
+                    }
+                }
+            }
+            players.forEach(p => {
+                if (isFollowing && activeToken && activeToken.dataset.playerId == p.id) return;
+                const token = document.createElement('div'); token.className = 'player-token'; token.style.backgroundColor = p.color; token.textContent = `P${p.id}`; token.dataset.playerId = p.id;
+                if (gameActive && p.r !== -1) terapkanRadarBidak(token, p.r, p.c);
+                if (p.id !== players[currentPlayerIndex].id) token.style.pointerEvents = 'none';
+                
+                if (p.r === -1) { token.style.position = 'static'; safeZone.appendChild(token); } 
+                else { 
+                    const cellEl = document.querySelector(`[data-r='${p.r}'][data-c='${p.c}']`); 
+                    if (cellEl) { token.style.left = "2px"; token.style.top = "2px"; cellEl.appendChild(token); }
+                }
+            });
+            let activePlayer = players[currentPlayerIndex];
+            if (activePlayer && activePlayer.r !== -1) terapkanRadarPanel(activePlayer.r, activePlayer.c);
+            else document.getElementById('alertBox').textContent = "Sistem Bersih. Sila ambil bidak Anda di Safe Zone.";
+        }
+
+        function eksekusiLangkahPemain(targetR, targetC, p) {
+            let block = mapData[targetR][targetC]; block.activated = true; block.displayType = block.type; p.alertText = ""; 
+            
+            let turnGain = 0; let turnLoss = 0; let labelAksi = "";
+            let triggerInstantFinish = false;
+
+            // 1. PROSES EKSEKUSI BLOK DIINJAK LANGSUNG
+            if (block.type === 'poin') { 
+                turnGain = p.buffTurns > 0 ? 20 : 10; p.score += turnGain; labelAksi = "Poin";
+                p.alertText = `+${turnGain} Poin`; p.history.push(`+${turnGain} Poin`);
+            } 
+            else if (block.type === 'bom') { 
+                let finalPenalty = p.buffTurns > 0 ? 9 : 15; p.score -= finalPenalty;
+                p.alertText = `-${finalPenalty} Poin (Bom)`; p.history.push(`-${finalPenalty} Poin (Bom)`);
+            } 
+            else if (block.type === 'monster') { 
+                if (p.score <= 0) {
+                    let baseDenda = 10; let diskon = p.buffTurns > 0 ? Math.floor(baseDenda * 0.40) : 0; turnLoss = baseDenda - diskon;
+                    p.alertText = `-${turnLoss} Poin (Monster)`; p.history.push(`-${turnLoss} Poin (Monster)`);
+                } else {
+                    let hitDenda = Math.floor(p.score * 0.50); let baseDenda = hitDenda > 10 ? hitDenda : 10;
+                    let diskon = p.buffTurns > 0 ? Math.floor(baseDenda * 0.40) : 0; turnLoss = baseDenda - diskon;
+                    p.alertText = `-[50%] -${turnLoss} Poin (Monster)`; p.history.push(`-[50%] -${turnLoss} Poin (Monster)`);
+                }
+                p.score -= turnLoss;
+            } 
+            else if (block.type === 'buff') { 
+                p.buffTurns = 4; p.alertText = "👑 Buff Aktif!"; p.history.push("👑 Mengaktifkan Buff Emas");
+            }
+            else if (block.type === 'normal') { 
+                p.alertText = "Zona Aman"; p.history.push("Menjelajah Zona Kosong Aman");
+            }
+            // FIX NEW: Jika pemain berhasil menginjak Blok Finish acak
+            else if (block.type === 'finish') {
+                p.alertText = "🏁 FINISH INSTAN!";
+                p.history.push("🏁 Berhasil Menemukan Blok Finish Instan!");
+                triggerInstantFinish = true;
+            }
+
+            let monsterLoss = pemicuMonsterSekitar(targetR, targetC, p);
+            
+            if (labelAksi === "Poin" && monsterLoss > 0) {
+                let hasilBersih = turnGain - monsterLoss;
+                if (hasilBersih >= 0) { p.alertText = `+${hasilBersih} Poin Bersih (Poin + Monster Sekitar)`; } 
+                else { p.alertText = `-[50%] ${hasilBersih} Poin Bersih (Poin + Monster Sekitar)`; }
+            }
+
+            if (p.buffTurns > 0) p.buffTurns--;
+            
+            // Mengamankan visual penanda ikon di render peta
+            if (block.type === 'finish') {
+                block.displayType = 'finish';
+            } else if (block.type === 'normal') {
+                block.displayType = 'normal';
+            } else {
+                block.type = 'normal';
+            }
+
+            // KONDISI TAMAT: Game berakhir jika poin habis ATAU jika blok finish instan berhasil diinjak
+            if (cekGameSelesai() || triggerInstantFinish) { 
+                gameActive = false; 
+                setTimeout(() => { menentukanPemenang(); }, 300);
+            } else { 
+                currentPlayerIndex = (currentPlayerIndex + 1) % players.length; 
+            }
+            updateUI();
+            setTimeout(() => { p.alertText = ""; updateUI(); }, 3000);
+        }
+
+        function pemicuMonsterSekitar(pRow, pCol, p) {
+            let totalMonsterPenalty = 0;
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    if (mapData[r][c].type === 'monster' && !mapData[r][c].activated) {
+                        if (Math.max(Math.abs(r - pRow), Math.abs(c - pCol)) <= 1) {
+                            mapData[r][c].activated = true; mapData[r][c].displayType = 'monster';
+                            let penaltySekitar = 0;
+                            if (p.score <= 0) {
+                                let baseDenda = 10; let diskon = p.buffTurns > 0 ? Math.floor(baseDenda * 0.40) : 0; penaltySekitar = baseDenda - diskon;
+                            } else { 
+                                let hitDenda = Math.floor(p.score * 0.50); let baseDenda = hitDenda > 10 ? hitDenda : 10;
+                                let diskon = p.buffTurns > 0 ? Math.floor(baseDenda * 0.40) : 0; penaltySekitar = baseDenda - diskon;
+                            }
+                            p.score -= penaltySekitar; totalMonsterPenalty += penaltySekitar;
+                            p.history.push(`-[50%] -${penaltySekitar} Poin (Monster Sekitar Berantai)`);
+                            if (p.alertText === "") { p.alertText = `-[50%] -${penaltySekitar} Poin (Monster Sekitar)`; }
+                            mapData[r][c].type = 'normal';
+                        }
+                    }
+                }
+            }
+            return totalMonsterPenalty;
+        }
+
+        function terapkanRadarBidak(element, pRow, pCol) {
+            let jarakBomTerdekat = 999; let jarakMonsterTerdekat = 999;
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    if (mapData[r][c].activated || mapData[r][c].type === 'normal') continue;
+                    let jarak = Math.max(Math.abs(r - pRow), Math.abs(c - pCol));
+                    if (mapData[r][c].type === 'bom' && jarak < jarakBomTerdekat) jarakBomTerdekat = jarak;
+                    if (mapData[r][c].type === 'monster' && jarak < jarakMonsterTerdekat) jarakMonsterTerdekat = jarak;
+                }
+            }
+            let batasBom = MAP_SIZE === 15 ? 3 : (MAP_SIZE === 25 ? 5 : 4); let batasMonster = MAP_SIZE === 15 ? 4 : (MAP_SIZE === 25 ? 8 : 6);
+            if (jarakBomTerdekat <= batasBom && jarakMonsterTerdekat <= batasMonster) element.style.animation = `blink-black ${hitungKecepatan(Math.min(jarakBomTerdekat, jarakMonsterTerdekat))}s infinite`;
+            else if (jarakMonsterTerdekat <= batasMonster) element.style.animation = `blink-purple-black ${hitungKecepatan(jarakMonsterTerdekat)}s infinite`;
+            else if (jarakBomTerdekat <= batasBom) element.style.animation = `blink-red ${hitungKecepatan(jarakBomTerdekat)}s infinite`;
+            else element.style.animation = 'none';
+        }
+
+        function terapkanRadarPanel(pRow, pCol) {
+            let jarakBomTerdekat = 999; let jarakMonsterTerdekat = 999; const alertBox = document.getElementById('alertBox');
+            for (let r = 0; r < MAP_SIZE; r++) {
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    if (mapData[r][c].activated || mapData[r][c].type === 'normal') continue;
+                    let jarak = Math.max(Math.abs(r - pRow), Math.abs(c - pCol));
+                    if (mapData[r][c].type === 'bom' && jarak < jarakBomTerdekat) jarakBomTerdekat = jarak;
+                    if (mapData[r][c].type === 'monster' && jarak < jarakMonsterTerdekat) jarakMonsterTerdekat = jarak;
+                }
+            }
+            let batasBom = MAP_SIZE === 15 ? 3 : (MAP_SIZE === 25 ? 5 : 4); let batasMonster = MAP_SIZE === 15 ? 4 : (MAP_SIZE === 25 ? 8 : 6);
+            alertBox.className = '';
+            if (jarakBomTerdekat <= batasBom && jarakMonsterTerdekat <= batasMonster) { alertBox.className = 'alert-blink-black-white'; alertBox.textContent = "💥⚠️ AWAS! Ranjau & Aura Monster Sangat Dekat! Bahaya Sesungguhnya!"; }
+            else if (jarakMonsterTerdekat <= batasMonster) { alertBox.className = 'alert-blink-purple'; alertBox.textContent = `🔮 RADAR: Terdeteksi Aura Monster Legendaris! (Jarak: ${jarakMonsterTerdekat} Blok)`; }
+            else if (jarakBomTerdekat <= batasBom) { alertBox.className = 'alert-blink-red'; alertBox.textContent = `💣 RADAR: Sinyal Peringatan Bom Merah di Sekitar! (Jarak: ${jarakBomTerdekat} Blok)`; }
+            else alertBox.textContent = "Sistem Aman. Area sekitar terdeteksi bersih dari ancaman.";
+        }
+        function hitungKecepatan(jarak) { if (jarak <= 1) return 0.15; if (jarak === 2) return 0.3; if (jarak === 3) return 0.5; if (jarak === 4) return 0.8; return 1.2; }
+        function cekGameSelesai() { let sisaPoin = 0; for (let r = 0; r < MAP_SIZE; r++) { for (let c = 0; c < MAP_SIZE; c++) { if (!mapData[r][c].activated && mapData[r][c].type === 'poin') sisaPoin++; } } return (sisaPoin === 0); }
+        function menentukanPemenang() { let rangking = [...players].sort((a, b) => b.score - a.score); alert(`🏁 FINISH INSTAN!\nGame Berakhir. Pemenangnya adalah ${rangking[0].name} dengan skor akhir ${rangking[0].score}!`); document.getElementById('alertBox').className = ''; document.getElementById('alertBox').textContent = `GAME SELESAI. Juara: ${rangking[0].name}`; }
+    </script>
+</body>
+</html>
